@@ -67,7 +67,7 @@ html, body, #root {
 }
 
 .toolbar-right {
-  min-width: 80px;
+  min-width: 140px;
   justify-content: flex-end;
 }
 
@@ -78,9 +78,30 @@ html, body, #root {
   text-align: center;
 }
 
-.view-label {
-  font-size: 12px;
+/* ── View switcher ────────────────────────────────────────────── */
+.view-switcher {
+  display: flex;
+  background: rgba(0,0,0,0.25);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-view {
+  background: transparent;
+  border: none;
   color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 3px 9px;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.btn-view:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.btn-view.active {
+  background: #1565c0;
+  color: #fff;
 }
 
 /* ── Buttons ─────────────────────────────────────────────────── */
@@ -278,44 +299,55 @@ html, body, #root {
   border-bottom: 1px solid var(--border);
 }
 
-.gantt-month-label {
+/* Top header row: month / year label */
+.gantt-header-top {
   position: absolute;
   top: 0;
-  height: 24px;
+  height: 20px;
   display: flex;
   align-items: center;
   padding-left: 6px;
   font-size: 11px;
   font-weight: 600;
   color: #aaa;
+  background: #1e2040;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  background: #1e2040;
   overflow: hidden;
   white-space: nowrap;
+  user-select: none;
 }
 
-.gantt-day-header {
+/* Bottom header row: day / week / quarter cells */
+.gantt-header-bottom {
   position: absolute;
-  top: 24px;
-  height: 32px;
+  top: 20px;
+  height: 36px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   color: var(--text-muted);
   border-right: 1px solid rgba(255,255,255,0.05);
   user-select: none;
+  gap: 1px;
 }
 
-.gantt-day-header.weekend {
-  color: #888;
+.gantt-header-bottom.weekend {
   background: rgba(255,255,255,0.03);
+  color: #777;
 }
 
-.gantt-day-header.today-header {
+.gantt-header-bottom.today-header {
   color: #ef5350;
   font-weight: 700;
+}
+
+.gantt-header-dow {
+  font-size: 9px;
+  opacity: 0.65;
+  line-height: 1;
 }
 
 .gantt-grid {
@@ -337,7 +369,7 @@ html, body, #root {
 }
 
 .today-col {
-  background: rgba(239,83,80,0.06);
+  background: rgba(239,83,80,0.05);
 }
 
 .today-line {
@@ -347,7 +379,17 @@ html, body, #root {
   background: #ef5350;
   pointer-events: none;
   z-index: 5;
-  opacity: 0.8;
+  opacity: 0.75;
+}
+
+/* Subtle month boundary lines */
+.gantt-month-line {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  background: rgba(255,255,255,0.06);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .gantt-row-bg {
@@ -371,22 +413,59 @@ html, body, #root {
   border-bottom: 1px solid var(--border);
 }
 
+/* ── Gantt bars ───────────────────────────────────────────────── */
 .gantt-bar {
   position: absolute;
   height: 24px;
   border-radius: 4px;
-  overflow: hidden;
-  cursor: pointer;
+  overflow: visible;
+  cursor: grab;
   display: flex;
   align-items: center;
   z-index: 3;
-  transition: filter 0.1s;
+  transition: filter 0.1s, box-shadow 0.1s;
   min-width: 4px;
+  user-select: none;
 }
 
 .gantt-bar:hover {
-  filter: brightness(1.15);
+  filter: brightness(1.12);
   z-index: 4;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.gantt-bar.dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  z-index: 20;
+  filter: brightness(1.2);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+/* Resize handles — invisible hot zones on left/right edges */
+.gantt-bar-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  z-index: 2;
+  cursor: ew-resize;
+}
+.gantt-bar-handle.left  { left: 0; border-radius: 4px 0 0 4px; }
+.gantt-bar-handle.right { right: 0; border-radius: 0 4px 4px 0; }
+
+/* Show subtle grip indicator on hover */
+.gantt-bar:hover .gantt-bar-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 10px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 1px;
+  box-shadow: -3px 0 0 rgba(255,255,255,0.5), 3px 0 0 rgba(255,255,255,0.5);
 }
 
 .gantt-bar-progress {
@@ -394,7 +473,7 @@ html, body, #root {
   left: 0;
   top: 0;
   height: 100%;
-  opacity: 0.5;
+  opacity: 0.45;
   border-radius: 4px;
   pointer-events: none;
 }
@@ -402,14 +481,33 @@ html, body, #root {
 .gantt-bar-label {
   position: relative;
   z-index: 1;
-  padding: 0 6px;
+  padding: 0 10px;
   font-size: 11px;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
   pointer-events: none;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Drag tooltip ─────────────────────────────────────────────── */
+.drag-tooltip {
+  position: fixed;
+  background: rgba(10,10,30,0.92);
+  color: #e0e0e0;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 9999;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  letter-spacing: 0.03em;
 }
 
 /* ── Modals ───────────────────────────────────────────────────── */

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { ViewMode } from '../types'
 
 export function useSettings() {
   const [currentDate, setCurrentDate] = useState<string>(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
   })
-  const [currentView, setCurrentView] = useState<string>('month')
+  const [currentView, setCurrentView] = useState<ViewMode>('month')
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -13,7 +14,8 @@ export function useSettings() {
       const date = await window.api.settings.get('current_date')
       const view = await window.api.settings.get('current_view')
       if (date) setCurrentDate(date)
-      if (view) setCurrentView(view)
+      const validViews: ViewMode[] = ['day', 'week', 'month', 'quarter', 'year']
+      if (view && validViews.includes(view as ViewMode)) setCurrentView(view as ViewMode)
     }
     load()
   }, [])
@@ -30,7 +32,7 @@ export function useSettings() {
     debouncedSave('current_date', date)
   }, [debouncedSave])
 
-  const updateCurrentView = useCallback((view: string) => {
+  const updateCurrentView = useCallback((view: ViewMode) => {
     setCurrentView(view)
     debouncedSave('current_view', view)
   }, [debouncedSave])

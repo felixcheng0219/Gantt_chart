@@ -19,8 +19,10 @@ export interface GanttEvent {
   color: string | null
 }
 
+export type ViewMode = 'day' | 'week' | 'month' | 'quarter' | 'year'
+
 export interface Settings {
-  current_view: string
+  current_view: ViewMode
   current_date: string
 }
 

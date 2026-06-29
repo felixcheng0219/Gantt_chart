@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react'
-import { Group, GanttEvent } from './types'
+import React, { useState, useCallback } from 'react'
+import { Group, GanttEvent, ViewMode } from './types'
 import { useGroups } from './hooks/useGroups'
 import { useEvents } from './hooks/useEvents'
 import { useSettings } from './hooks/useSettings'
@@ -16,10 +16,6 @@ type Modal =
   | { type: 'group-create' }
   | { type: 'group-edit'; group: Group }
 
-function getMonthStart(dateStr: string): string {
-  return dateStr.slice(0, 7) + '-01'
-}
-
 function addMonths(dateStr: string, delta: number): string {
   const d = new Date(dateStr + 'T00:00:00')
   d.setMonth(d.getMonth() + delta)
@@ -34,14 +30,17 @@ function todayMonthStart(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 }
 
+const VALID_VIEWS: ViewMode[] = ['day', 'week', 'month', 'quarter', 'year']
+
 export default function App() {
   const { groups, createGroup, updateGroup, deleteGroup, moveGroup } = useGroups()
   const { events, createEvent, updateEvent, deleteEvent, moveEvent } = useEvents()
-  const { currentDate, updateCurrentDate } = useSettings()
+  const { currentDate, currentView, updateCurrentDate, updateCurrentView } = useSettings()
   const [modal, setModal] = useState<Modal>({ type: 'none' })
 
-  // Auto-save debounce ref for event/group saves (they save immediately via IPC, so no extra debounce needed)
-  // The settings hook handles its own debounce
+  const viewMode: ViewMode = VALID_VIEWS.includes(currentView as ViewMode)
+    ? (currentView as ViewMode)
+    : 'month'
 
   const handleAddEvent = useCallback(() => {
     setModal({ type: 'event-create', defaultGroupId: null })
@@ -69,7 +68,6 @@ export default function App() {
 
   const handleSaveEvent = useCallback(async (data: Omit<GanttEvent, 'id'>) => {
     if (modal.type === 'event-create') {
-      // Determine next sort_order for this group
       const groupEvents = events.filter(e => e.group_id === data.group_id)
       const maxOrder = groupEvents.reduce((m, e) => Math.max(m, e.sort_order), -1)
       await createEvent({ ...data, sort_order: maxOrder + 1 })
@@ -105,13 +103,19 @@ export default function App() {
     updateCurrentDate(todayMonthStart())
   }, [updateCurrentDate])
 
+  const handleUpdateEvent = useCallback(async (id: number, data: Partial<GanttEvent>) => {
+    await updateEvent(id, data)
+  }, [updateEvent])
+
   return (
     <div className="app">
       <Toolbar
         currentDate={currentDate}
+        viewMode={viewMode}
         onPrev={handlePrev}
         onNext={handleNext}
         onToday={handleToday}
+        onViewChange={updateCurrentView}
         onAddEvent={handleAddEvent}
         onAddGroup={handleAddGroup}
       />
@@ -133,7 +137,9 @@ export default function App() {
             groups={groups}
             events={events}
             currentDate={currentDate}
+            viewMode={viewMode}
             onEditEvent={handleEditEvent}
+            onUpdateEvent={handleUpdateEvent}
           />
         </div>
       </div>
